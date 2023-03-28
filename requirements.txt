@@ -1,0 +1,5 @@
+flask==2.2.2
+azure.storage.blob
+pandas==1.4.3
+numpy==1.21.5
+scipy==1.7.3
