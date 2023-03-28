@@ -1,10 +1,13 @@
 from azure.storage.blob import BlobServiceClient
 from flask import Flask
 from io import StringIO
+import os
 import csv
 
+
+
 # Define the connection string and the container name
-conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
+conn_str = os.environ['CONNSTR_BLOB']
 container_name = 'prova'
 
 
