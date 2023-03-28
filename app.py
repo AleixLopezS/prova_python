@@ -7,7 +7,7 @@ import csv
 
 
 # Define the connection string and the container name
-conn_str = os.environ['CONNSTR_BLOB']
+conn_str = os.environ['CUSTOMCONNSTR_blobstorage']
 container_name = 'prova'
 
 
