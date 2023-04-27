@@ -520,4 +520,5 @@ def calcul_enun():
 
 # Iniciamos nuestra app
 if __name__ == '__main__':
+   app.debug = True
    app.run()
