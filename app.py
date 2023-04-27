@@ -6,7 +6,6 @@ from io import StringIO
 import os
 import csv
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from solver import *
 
@@ -19,60 +18,42 @@ def index():
 
 # Creación de un fichero en blob storage
 @app.route('/calcul_enun', methods=['GET'])
-def calcul_enun():    
+def calcul_enun():        
 
     conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
-    container_entrada = 'entrada'
-    container_salida = 'salida'
-    # --- ORIGENS DE DADES ---
-    # Dades d'exàmens
-    
-    blob_dades_exams = 'entrada/Dades_examens_PAU.csv'    
-    #PATH_EXTRACCIO = 'c:\\Users\\53339164w\\Albert_Jupyter\\Datasets\\REU Exàmens PAU\\Dades\\Dades_examens_PAU.xlsx'
-    #SHEET_EXTRACCIO = 'Extraccio 03052022'
+    container_salida = 'salida'    
 
-    # Dades Seus-Tribunals
-    blob_seus_tribunal = 'entrada/seustribunal.csv'
-    #PATH_SEUS_TRIBUNALS = PATH_EXTRACCIO
-    #SHEET_SEUS_TRIBUNALS = 'SeusTribunals'
-
-    # Caixes
     blob_caixes = 'entrada/caixes.json'
-    #PATH_CAIXES = 'c:\\Users\\53339164w\\Albert_Jupyter\\Datasets\\REU Exàmens PAU\\Dades\\caixes.json'
+    blob_excel = 'entrada/CalculEnunciatsCaixesExamens_NumeroAlumnes_Prematriculats 2023 ordenat mgz.xlsx'
+    SHEET_EXTRACCIO = 'Extraccio 24042023'
+    SHEET_SEUS_TRIBUNALS = 'SeusTribunals'
+    blob_asignatures = 'entrada/Dades_assignatures.xlsx'
 
-    # Informació Assignatures
-    blob_asignatures = 'entrada/Dades_assignatures.csv'
-    #PATH_ASSIGNATURES = 'c:\\Users\\53339164w\\Albert_Jupyter\\Datasets\\REU Exàmens PAU\\Dades\\Dades_assignatures.xlsx'
+    data_raw_previsio = pd.read_excel(
+        f"abfs://{blob_excel}",
+        storage_options={
+            "connection_string": conn_str
+    }, sheet_name=SHEET_EXTRACCIO)
 
+    data_raw_tribunals = pd.read_excel(
+        f"abfs://{blob_excel}",
+        storage_options={
+            "connection_string": conn_str
+    }, sheet_name=SHEET_SEUS_TRIBUNALS)
 
-    # --- IMPORTACIÓ DE DADES --- 
+    data_raw_assignatures = pd.read_excel(
+        f"abfs://{blob_asignatures}",
+        storage_options={
+            "connection_string": conn_str
+    })  
+    
 
-    # Previsió
-    data_raw_previsio = pd.read_csv(f"abfs://{blob_dades_exams}",
-                                    storage_options={"connection_string": conn_str}, 
-                                    header=0)
-    #data_raw_previsio = pd.read_excel(PATH_EXTRACCIO, sheet_name=SHEET_EXTRACCIO)
-
-    # Mestre Trubinal-Seu
-    data_raw_tribunals = pd.read_csv(f"abfs://{blob_seus_tribunal}",
-                                    storage_options={"connection_string": conn_str}, 
-                                    header=0)
-    #data_raw_tribunals = pd.read_excel(PATH_SEUS_TRIBUNALS, sheet_name=SHEET_SEUS_TRIBUNALS)
-
-    # Assignatures
-    data_raw_assignatures = pd.read_csv(f"abfs://{blob_asignatures}",
-                                    storage_options={"connection_string": conn_str}, 
-                                    header=0)
-    #data_raw_assignatures = pd.read_excel(PATH_ASSIGNATURES)
-
-    # Caixes
+    #AQUI LA LECTURA DEL JSON
     data_raw_caixes = pd.read_json(f"abfs://{blob_caixes}",
                                     storage_options={"connection_string": conn_str}
                                     )
-    #with open(PATH_CAIXES, encoding="utf8") as json_file:
-    #    data_raw_caixes = json.load(json_file)
-
-
+    
+    # PROCESAMIENTO DE LOS DATOS
     # --- PRE-PROCESSAT DE DADES ---
 
     # Canvi de tipus de dades
@@ -158,7 +139,7 @@ def calcul_enun():
     for i, nom_caixa in enumerate(caixes):
 
         # Optimitzem la caixa
-        n,x = solver.optimizar_caixa(caixes[nom_caixa])
+        n,x = optimizar_caixa(caixes[nom_caixa])
 
         # Guardem els resultats al diccionari de la caixa
         caixes[nom_caixa]['n']=n    # Nombre d'examens en català de cada assignatura en la caixa
@@ -221,21 +202,21 @@ def calcul_enun():
 
     # --- CÀLCUL DE SUB-TOTALS ---
     for nom_caixa in caixes:
-       k = np.array(list(caixes[nom_caixa]['Fulls per assignatura'].values()))
-       n_cat = caixes[nom_caixa]['n_cat']
-       n_cast = caixes[nom_caixa]['n_cast']
-       x = caixes[nom_caixa]['x']
-       r = caixes[nom_caixa]['N Caixes reserva']
+        k = np.array(list(caixes[nom_caixa]['Fulls per assignatura'].values()))
+        n_cat = caixes[nom_caixa]['n_cat']
+        n_cast = caixes[nom_caixa]['n_cast']
+        x = caixes[nom_caixa]['x']
+        r = caixes[nom_caixa]['N Caixes reserva']
 
-       caixes[nom_caixa]['Fulls']=np.inner(n_cat+n_cast,k)*(sum(x)+r)    # Fulls A3 de totes les caixes d'aquest tipus
-       caixes[nom_caixa]['Fulls per caixa']=np.inner(n_cat+n_cast,k)    # Fulls A3 que conté la caixa
-       caixes[nom_caixa]['Caixes a encarregar']=sum(x)+r    # Nombre de caixes d'aquest tipus en concret a encarregar
-       caixes[nom_caixa]['Examens']= (sum(n_cat)+sum(n_cast))*(sum(x)+r)
-       caixes[nom_caixa]['Examens Català']= sum(n_cat)*(sum(x)+r)
-       caixes[nom_caixa]['Examens Castellà']= sum(n_cast)*(sum(x)+r)
-       caixes[nom_caixa]['Examens per caixa']= sum(n_cat)+sum(n_cast)
-       caixes[nom_caixa]['Examens Català per caixa']= sum(n_cat)
-       caixes[nom_caixa]['Examens Castellà per caixa']= sum(n_cat)
+        caixes[nom_caixa]['Fulls']=np.inner(n_cat+n_cast,k)*(sum(x)+r)    # Fulls A3 de totes les caixes d'aquest tipus
+        caixes[nom_caixa]['Fulls per caixa']=np.inner(n_cat+n_cast,k)    # Fulls A3 que conté la caixa
+        caixes[nom_caixa]['Caixes a encarregar']=sum(x)+r    # Nombre de caixes d'aquest tipus en concret a encarregar
+        caixes[nom_caixa]['Examens']= (sum(n_cat)+sum(n_cast))*(sum(x)+r)
+        caixes[nom_caixa]['Examens Català']= sum(n_cat)*(sum(x)+r)
+        caixes[nom_caixa]['Examens Castellà']= sum(n_cast)*(sum(x)+r)
+        caixes[nom_caixa]['Examens per caixa']= sum(n_cat)+sum(n_cast)
+        caixes[nom_caixa]['Examens Català per caixa']= sum(n_cat)
+        caixes[nom_caixa]['Examens Castellà per caixa']= sum(n_cat)
 
     # --- CÀLCUL DE TOTALS ---
     total_fulls = 0
@@ -300,8 +281,8 @@ def calcul_enun():
     NRE_TRIBUNALS_values.append(0)
 
     df_LK_SEU = pd.DataFrame({'SEU_ID': SEU_ID_values, 
-                              'UNIVERSITAT_ID': UNIVERSITAT_ID_values,
-                              'NRE_TRIBUNALS': NRE_TRIBUNALS_values}).sort_values(by='SEU_ID')
+                            'UNIVERSITAT_ID': UNIVERSITAT_ID_values,
+                            'NRE_TRIBUNALS': NRE_TRIBUNALS_values}).sort_values(by='SEU_ID')
 
     # LK_TRIBUNAL
     TRIBUNAL_ID_values = list(dic_trib_seu.keys())
@@ -372,7 +353,10 @@ def calcul_enun():
     NRE_CAIXES_values = []
 
     for nom_caixa in caixes: 
+        print(nom_caixa)
+        
         for i, trib in enumerate(caixes[nom_caixa]['Tribunals']):
+            print(i)
             ANY_CONVOC_values.append(ANY_CONVOC)
             DIA_CALCUL_values.append(execucio_datetime.strftime("%Y-%m-%dT%H:%M:%S"))
             CAIXA_ID_values.append(nom_caixa)
@@ -463,154 +447,77 @@ def calcul_enun():
                                             'NRE_EXAMENS_IMPRIMIR': NRE_EXAMENS_IMPRIMIR_values,
                                             'NRE_EXAMENS_SOBRANTS': NRE_EXAMENS_SOBRANTS_values})
 
-    blob_service_client = BlobServiceClient.from_connection_string(conn_str)
+    #################################################################################
+    
     # --- EXPORTACIÓ A CSV ---
-    new_blob_lk_any = df_LK_ANY.to_csv(index=False)       
+
+    # Crear un nuevo archivo CSV a partir del dataframe procesado
+    new_blob_lk_any = df_LK_ANY.to_csv(index=False)    
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_ANY.csv')
     blob_client.upload_blob(new_blob_lk_any, overwrite=True)
     #
-    new_blob_lk_versio = df_LK_VERSIO.to_csv(index=False)        
+    new_blob_lk_versio = df_LK_VERSIO.to_csv(index=False)    
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_VERSIO.csv')
     blob_client.upload_blob(new_blob_lk_versio, overwrite=True)
     #
-    new_blob_lk_caixa = df_LK_CAIXA.to_csv(index=False)        
+    new_blob_lk_caixa = data_raw_assignatures.to_csv(index=False)    
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_CAIXA.csv')
     blob_client.upload_blob(new_blob_lk_caixa, overwrite=True)
     #
-    new_blob_lk_universitat = df_LK_UNIVERSITAT.to_csv(index=False)        
+    new_blob_lk_universitat = df_LK_UNIVERSITAT.to_csv(index=False)   
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)     
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_UNIVERSITAT.csv')
     blob_client.upload_blob(new_blob_lk_universitat, overwrite=True)
     #
-    new_blob_lk_seu = df_LK_SEU.to_csv(index=False)        
+    new_blob_lk_seu = df_LK_SEU.to_csv(index=False)
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)        
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_SEU.csv')
     blob_client.upload_blob(new_blob_lk_seu, overwrite=True)
     #
-    new_blob_lk_tribunal = df_LK_TRIBUNAL.to_csv(index=False)        
+    new_blob_lk_tribunal = df_LK_TRIBUNAL.to_csv(index=False)
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)     
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_TRIBUNAL.csv')
     blob_client.upload_blob(new_blob_lk_tribunal, overwrite=True)
     #
-    new_blob_lk_centre = df_LK_CENTRE.to_csv(index=False)        
+    new_blob_lk_centre = df_LK_CENTRE.to_csv(index=False)
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)        
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_CENTRE.csv')
     blob_client.upload_blob(new_blob_lk_centre, overwrite=True)
     #
-    new_blob_lk_materia = df_LK_MATERIA.to_csv(index=False)        
+    new_blob_lk_materia = df_LK_MATERIA.to_csv(index=False)   
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)     
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_MATERIA.csv')
     blob_client.upload_blob(new_blob_lk_materia, overwrite=True)
     #
-    new_blob_lk_idioma = df_LK_IDIOMA.to_csv(index=False)        
+    new_blob_lk_idioma = df_LK_IDIOMA.to_csv(index=False)  
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)      
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='LK_IDIOMA.csv')
     blob_client.upload_blob(new_blob_lk_idioma, overwrite=True)
     #
-    new_blob_rel_caixa_mat = df_REL_DIA_CAIXA_MATERIA.to_csv(index=False)        
+    new_blob_rel_caixa_mat = df_REL_DIA_CAIXA_MATERIA.to_csv(index=False)    
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)    
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='REL_DIA_CAIXA_MATERIA.csv')
     blob_client.upload_blob(new_blob_rel_caixa_mat, overwrite=True)
     #
-    new_blob_rel_caixes_trib = df_REL_CAIXES_PER_TRIBUNAL.to_csv(index=False)        
+    new_blob_rel_caixes_trib = df_REL_CAIXES_PER_TRIBUNAL.to_csv(index=False)   
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)     
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='df_REL_CAIXES_PER_TRIBUNAL.csv')
     blob_client.upload_blob(new_blob_rel_caixes_trib, overwrite=True)
     #
-    new_blob_rel_examens_trib = df_REL_EXAMENS_PER_TRIBUNAL.to_csv(index=False)        
+    new_blob_rel_examens_trib = df_REL_EXAMENS_PER_TRIBUNAL.to_csv(index=False)     
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)   
     blob_client = blob_service_client.get_blob_client(container=container_salida, blob='df_REL_EXAMENS_PER_TRIBUNAL.csv')
-    blob_client.upload_blob(new_blob_rel_examens_trib, overwrite=True)    
+    blob_client.upload_blob(new_blob_rel_examens_trib, overwrite=True)  
+    #print(data_raw_caixes)
     
-    #df_LK_ANY.to_csv(PATH_RESULTATS+'LK_ANY.csv',index=False)
-    #df_LK_VERSIO.to_csv(PATH_RESULTATS+'LK_VERSIO.csv',index=False)
-    #df_LK_CAIXA.to_csv(PATH_RESULTATS+'LK_CAIXA.csv',index=False)
-    #df_LK_UNIVERSITAT.to_csv(PATH_RESULTATS+'LK_UNIVERSITAT.csv',index=False)
-    #df_LK_SEU.to_csv(PATH_RESULTATS+'LK_SEU.csv',index=False)
-    #df_LK_TRIBUNAL.to_csv(PATH_RESULTATS+'LK_TRIBUNAL.csv',index=False)
-    #df_LK_CENTRE.to_csv(PATH_RESULTATS+'LK_CENTRE.csv',index=False)
-    #df_LK_MATERIA.to_csv(PATH_RESULTATS+'LK_MATERIA.csv',index=False)
-    #df_LK_IDIOMA.to_csv(PATH_RESULTATS+'LK_IDIOMA.csv',index=False)
-    #df_REL_DIA_CAIXA_MATERIA.to_csv(PATH_RESULTATS+'REL_DIA_CAIXA_MATERIA.csv',index=False)
-    #df_REL_CAIXES_PER_TRIBUNAL.to_csv(PATH_RESULTATS+'REL_CAIXES_PER_TRIBUNAL.csv',index=False)
-    #df_REL_EXAMENS_PER_TRIBUNAL.to_csv(PATH_RESULTATS+'REL_EXAMENS_PER_TRIBUNAL.csv',index=False)
-
-
-    # --- EXPORTACIÓ DE LOGs ---
-    #log_name = "LOG_" + execucio_datetime.strftime("%Y_%m_%d_%Hh_%Mm_%Ss") + ".txt"
-    #blob = BlobClient.from_connection_string(conn_str=conn_str, container_name="salida", blob_name=log_name)
-
-    #data = "---------- CONVOCATÒRIA ---------- " + "\n" +
-    #      "Any de la convocatòria: "+str(ANY_CONVOC) + "\n\n" +
-    #       "---------- DATA D EXECUCIÓ ----------"+ "\n" +
-    #       "Data d\'execució: '"+execucio_datetime.strftime("%Y/%m/%d %H:%M:%S") + "\n\n" +
-    #       "---------- VALIDACIÓ  ----------"+ "\n" +
-    #       resultat_validacio + "\n\n" +           
-           
-    #blob.upload_blob(data)
-
-    #log_name = PATH_RESULTATS + "LOG_" + execucio_datetime.strftime("%Y_%m_%d_%Hh_%Mm_%Ss") + ".txt"
-
-    #with open(log_name, "w", encoding='utf-8') as f: 
-        # Informació sobre la convocatoria'
-        #f.write('---------- CONVOCATÒRIA ----------'+ "\n")
-        #f.write('Any de la convocatòria: '+str(ANY_CONVOC) + "\n\n")
-
-        # Informació sobre la data d'execució'
-        #f.write('---------- DATA D\'EXECUCIÓ ----------'+ "\n")
-        #f.write('Data d\'execució: '+execucio_datetime.strftime("%Y/%m/%d %H:%M:%S") + "\n\n")
-
-        # Informació sobre la validació de la cobertura de previsió
-        #f.write('---------- VALIDACIÓ  ----------'+ "\n")
-        #f.write(resultat_validacio + "\n\n")
-
-        # Nombre de fulls per caixa
-        #f.write('Fulls per caixa: \n')
-        #for nom_caixa in caixes:
-        #    f.write(str(caixes[nom_caixa]['Fulls per caixa'])+'\t'+ nom_caixa+'\n')
-
-        # Informació general
-        #f.write('\n---------- INFORMACIÓ GENERAL ----------'+ "\n")
-        #f.write('TOTAL Fulls: ' + str(total_fulls)+ "\n")
-        #f.write('TOTAL Exàmens: ' + str(total_examens)+ "\n")
-        #f.write('TOTAL Exàmens en Català: ' + str(total_examens_cat)+ "\n")
-        #f.write('TOTAL Exàmens en Castellà: ' + str(total_examens_cast)+ "\n")
-        #f.write('TOTAL Caixes: ' + str(total_caixes)+ "\n\n")
-
-        # Caixes de reserva
-        #f.write('Caixes de reserva: \n')
-        #for nom_caixa in caixes:
-        #    f.write(str(caixes[nom_caixa]['N Caixes reserva'])+'\t'+ nom_caixa+'\n')
-
-        # Informació de cada caixa
-        #f.write('\n------------- INFORMACIÓ SOBRE LES CAIXES -------------\n')
-
-        #for nom_caixa in caixes:
-        #    f.write('\n--------------------- '+nom_caixa+' ---------------------'+ "\n")
-            
-            # Informació del nombre d'exàmens per caixa
-        #    f.write('----- NOMBRE D\'EXÀMENS PER CAIXA -----'+ "\n")
-        #    f.write('----- Examens en Català -----'+ "\n")
-        #    for i, assig in enumerate(caixes[nom_caixa]['Assignatures']):
-        #        f.write(str(caixes[nom_caixa]['n_cat'][i])+ '\t'+ assig+ "\n")
-            
-        #    f.write('\n----- Examens en Castellà -----'+ "\n")
-        #    for i, assig in enumerate(caixes[nom_caixa]['Assignatures']):
-        #        f.write(str(caixes[nom_caixa]['n_cast'][i])+ '\t'+ assig+ "\n")
-            
-            # Informació addicional de la caixa
-        #    f.write('\n----- INFORMACIÓ ADDICIONAL -----'+ "\n\n")
-        #    f.write('Fulls per caixa: ' + str(caixes[nom_caixa]['Fulls per caixa'])+ "\n")
-        #    f.write('Exàmens per caixa: ' + str(caixes[nom_caixa]['Examens per caixa'])+ "\n\n")
-
-        #    f.write('Exàmens en Català per caixa: ' + str(caixes[nom_caixa]['Examens Català per caixa'])+ "\n")
-        #    f.write('Exàmens en Castellà per caixa: ' + str(caixes[nom_caixa]['Examens Castellà per caixa'])+ "\n\n")
-
-        #    f.write('Caixes a encarregar: ' + str(caixes[nom_caixa]['Caixes a encarregar']))
-            
-        #    f.write('\n------------------------------------------------------'+ "\n")
-
-        # Informació sobre el repartiment
-        #f.write("\n"+'------------- INFORMACIÓ SOBRE EL REPARTIMENT -------------'+"\n")
-
-        # Nombre de caixes (x)
-        #for nom_caixa in caixes:
-        #    f.write('\n--------------------- '+nom_caixa+' ---------------------'+ "\n")
-        #    for i, trib in enumerate(caixes[nom_caixa]['Tribunals']):
-        #        f.write(str(caixes[nom_caixa]['x'][i])+ '\t'+ trib+'\n')
-        #    f.write('------------------------------------------------------'+ "\n")"""
-            
     print('CSV files created successfully! hey')
 
-    return 'CSV file created successfully!'
+    return 'CSV files created successfully!'
+
+
+# Iniciamos nuestra app
+if __name__ == '__main__':
+   app.run()
