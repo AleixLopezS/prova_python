@@ -7,8 +7,8 @@ from scipy.optimize import minimize, LinearConstraint, NonlinearConstraint, shgo
 # --------------------- CONFIGURACIÓ ----------------------------------
 
 # ------------- Constraints d'optimització -------------
-N_min_fulls_caixa_sense_castella = 1050*0.50        # Nombre mínim de fulls din-A3 que ha de contenir la caixa, excloent els exàmens addicionals de castellà
-N_max_fulls_caixa_sense_castella = 1050*0.78     # Nombre màxim de fulls din-A3 que ha de contenir la caixa, excloent els exàmens addicionals de castellà
+N_min_fulls_caixa_sense_castella = 1550*0.50        # Nombre mínim de fulls din-A3 que ha de contenir la caixa, excloent els exàmens addicionals de castellà
+N_max_fulls_caixa_sense_castella = 1550*0.78     # Nombre màxim de fulls din-A3 que ha de contenir la caixa, excloent els exàmens addicionals de castellà
 
 # ------------- Solvers -------------
 # --- Solvers de Mínims Locals ---
@@ -27,7 +27,7 @@ x0_option = 1
 # --- x0_option = 1 ---
 fulls_per_caixa_aprox = N_max_fulls_caixa_sense_castella     # Nombre aproximat de fulls din-A3 que ha de contenir la caixa, excloent els exàmens addicionals de castellà
 
-# --- x0_option = 2 ---
+# --- x0_option = 2 --- x0_option = 3 ---
 x_mig = 1
 
 # --------------------- FI CONFIGURACIÓ ----------------------------------
