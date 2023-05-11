@@ -22,8 +22,8 @@ def index():
 def moure_fitxers():    
     execucio_datetime = datetime.now()
     container_hist = 'innenu-historics'  
-    conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
-    #conn_str = os.environ['CUSTOMCONNSTR_blobstorage']
+    #conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
+    conn_str = os.environ['CUSTOMCONNSTR_blobstorage']
     container_name = "innenu-sortida"
 
     blob_service_client = BlobServiceClient.from_connection_string(conn_str)
@@ -49,7 +49,8 @@ def moure_fitxers():
 # Concatenacion de los ficheros
 @app.route('/concatenate', methods=['GET'])
 def concatenate():    
-    conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
+    #conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
+    conn_str = os.environ['CUSTOMCONNSTR_blobstorage']
     container_salida = 'innenu-sortida'
 
     # Lectura del fichero de Versio
@@ -70,8 +71,9 @@ def concatenate():
     return 'Proceso Concatenate Terminado con Exito'
 
 def generate_file(nom_file,version):
-    print(nom_file)
-    conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
+    
+    #conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
+    conn_str = os.environ['CUSTOMCONNSTR_blobstorage']
     container_salida = 'innenu-sortida'
     #Borro el fichero por si existiera
     blob_service_client = BlobServiceClient.from_connection_string(conn_str)
@@ -145,8 +147,8 @@ def caixa_3_B():
 
 ## Funcion que genera los ficheros por cada caja
 def caixa(nombre_caixa):
-    #conn_str = os.environ['CUSTOMCONNSTR_blobstorage']
-    conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
+    conn_str = os.environ['CUSTOMCONNSTR_blobstorage']
+    #conn_str = 'DefaultEndpointsProtocol=https;AccountName=stfwehqdcdes;AccountKey=gPydOfNRuyS5spnv80AXBue7fJwbC5DqyPTRzx5Djc8ZxvkVgo11CAvtfv8IE3P1BJQ0TXPiXXac+AStT8N+UQ==;EndpointSuffix=core.windows.net'
     container_salida = 'innenu-sortida'    
 
     blob_caixes = 'innenu-entrada/caixes.json'
@@ -648,4 +650,5 @@ def caixa(nombre_caixa):
 
 # Iniciamos nuestra app
 if __name__ == '__main__':
+   app.debug = True
    app.run()
